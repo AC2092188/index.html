@@ -1,0 +1,134 @@
+
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <title>Shishaning nur sindirish ko‘rsatkichini aniqlash</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f5f7fa; text-align: center; margin: 0; }
+    canvas { background: white; display: block; margin: 20px auto; border: 1px solid #ccc; }
+    .controls { max-width: 600px; margin: auto; text-align: left; padding: 10px; }
+    label { display: block; margin-top: 10px; }
+    input[type=range] { width: 100%; }
+    .formula { max-width: 600px; margin: 20px auto; background: #fff; padding: 15px; border: 1px solid #ccc; }
+  </style>
+</head>
+<body>
+<h2>Shishaning nur sindirish ko‘rsatkichini aniqlash simulyatsiyasi</h2>
+<canvas id="canvas" width="700" height="400"></canvas>
+
+<div class="controls">
+  <label>Havo sindirish ko‘rsatkichi n₁: <span id="n1Val">1.0</span></label>
+  <input type="range" id="n1" min="1.0" max="2.0" step="0.01" value="1.0">
+
+  <label>Shisha sindirish ko‘rsatkichi n₂: <span id="n2Val">1.5</span></label>
+  <input type="range" id="n2" min="1.0" max="2.5" step="0.01" value="1.5">
+
+  <label>Kiruvchi nur burchagi α (gradus): <span id="alphaVal">30</span></label>
+  <input type="range" id="alpha" min="0" max="90" value="30">
+</div>
+
+<div class="formula" id="info"></div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+const n1Slider = document.getElementById('n1');
+const n2Slider = document.getElementById('n2');
+const alphaSlider = document.getElementById('alpha');
+const n1Val = document.getElementById('n1Val');
+const n2Val = document.getElementById('n2Val');
+const alphaVal = document.getElementById('alphaVal');
+const info = document.getElementById('info');
+
+function degToRad(deg) {
+  return deg * Math.PI / 180;
+}
+
+function radToDeg(rad) {
+  return rad * 180 / Math.PI;
+}
+
+function drawScene() {
+  const alphaDeg = parseFloat(alphaSlider.value);
+  const n1 = parseFloat(n1Slider.value);
+  const n2 = parseFloat(n2Slider.value);
+
+  n1Val.textContent = n1.toFixed(2);
+  n2Val.textContent = n2.toFixed(2);
+  alphaVal.textContent = alphaDeg;
+
+  const alphaRad = degToRad(alphaDeg);
+  let betaRad = Math.asin((n1 / n2) * Math.sin(alphaRad));
+  let betaDeg = radToDeg(betaRad);
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+
+  // Normal line
+  ctx.setLineDash([5, 5]);
+  ctx.beginPath();
+  ctx.moveTo(centerX, 0);
+  ctx.lineTo(centerX, canvas.height);
+  ctx.strokeStyle = 'gray';
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Interface line between air and glass
+  ctx.beginPath();
+  ctx.moveTo(0, centerY);
+  ctx.lineTo(canvas.width, centerY);
+  ctx.strokeStyle = 'black';
+  ctx.stroke();
+
+  const length = 100;
+
+  // Incident ray
+  ctx.beginPath();
+  ctx.moveTo(centerX - length * Math.sin(alphaRad), centerY - length * Math.cos(alphaRad));
+  ctx.lineTo(centerX, centerY);
+  ctx.strokeStyle = 'blue';
+  ctx.stroke();
+
+  // Refracted ray
+  ctx.beginPath();
+  if (isNaN(betaRad)) {
+    ctx.moveTo(centerX, centerY);
+    ctx.lineTo(centerX + length * Math.sin(alphaRad), centerY - length * Math.cos(alphaRad));
+    ctx.strokeStyle = 'red';
+    betaDeg = 'Total internal reflection';
+  } else {
+    ctx.moveTo(centerX, centerY);
+    ctx.lineTo(centerX + length * Math.sin(betaRad), centerY + length * Math.cos(betaRad));
+    ctx.strokeStyle = 'green';
+  }
+  ctx.stroke();
+
+  // Reflection (total internal reflection case)
+  const reflectionDeg = alphaDeg; // Reflection angle equals to incident angle (Snell's Law)
+  const reflectionRad = degToRad(reflectionDeg);
+  ctx.beginPath();
+  ctx.moveTo(centerX, centerY);
+  ctx.lineTo(centerX + length * Math.sin(reflectionRad), centerY - length * Math.cos(reflectionRad));
+  ctx.strokeStyle = 'orange';
+  ctx.stroke();
+
+  info.innerHTML = `
+    <b>Snell qonuni:</b> <code>n₁·sin(α) = n₂·sin(β)</code><br>
+    α = ${alphaDeg}°, n₁ = ${n1}, n₂ = ${n2} → β = ${isNaN(betaDeg) ? betaDeg : betaDeg.toFixed(1)}°<br>
+    <b>Qaytish burchagi (Reflection):</b> ${reflectionDeg}°<br>
+    Sindirish ko‘rsatkichi (n): ${n2}<br>
+    Nur tezligi pasayadi: ${n1 < n2 ? 'HA' : 'YOʻQ'}
+  `;
+}
+
+n1Slider.addEventListener('input', drawScene);
+n2Slider.addEventListener('input', drawScene);
+alphaSlider.addEventListener('input', drawScene);
+drawScene();
+</script>
+</body>
+</html>
